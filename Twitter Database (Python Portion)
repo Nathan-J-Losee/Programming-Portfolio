@@ -1,0 +1,109 @@
+import pyodbc
+
+#The following have been ommitted for security reasons
+server = ''
+database = ''
+username = ''
+password = ''
+
+connection = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=' +
+                            server + ';DATABASE=' + database +
+                            ';UID=' + username + ';PWD=' + password)
+
+cursor = connection.cursor()
+
+#Make sure connection to SQL Server worked
+cursor.execute("SELECT @@version;")
+row = cursor.fetchone()
+while row:
+    print(row[0])
+    row = cursor.fetchone()
+    
+#Begin Twitter scraping
+import requests
+#import os
+import json
+
+bearer_token = '' #Ommited for Security Reasons, my personal token
+
+search_url = "https://api.twitter.com/2/tweets/search/recent"
+
+query_params = {
+    'query': 'Jazz -is:retweet lang:en',
+    'max_results': 10,
+    'expansions': 'author_id',
+    'user.fields': 'created_at,username,location',
+    'tweet.fields': 'author_id,entities,geo,created_at'
+}
+
+headers = {
+    'Authorization': 'Bearer {}'.format(bearer_token),
+    'User-Agent': 'TopicPull-NLose27'
+}
+
+response = requests.request("GET", search_url, headers=headers, params=query_params)
+
+parse_json = response.json()
+#Uncomment if you wish to see the raw json
+#print(parse_json, '\n\n')    
+
+#Get each part of the tweet needed and send to Database
+for i in range(len(parse_json['data'])):
+        try:
+            #print(parse_json['data'][i]['id'])
+            tweet_id = parse_json['data'][i]['id']
+        
+            #print(parse_json['data'][i]['text'])
+            tweet_text = parse_json['data'][i]['text']
+        
+            try:
+                #print(parse_json['includes']['users'][i]['id'])
+                user_id = parse_json['includes']['users'][i]['id']
+                
+                #print(parse_json['includes']['users'][i]['username'])
+                handle = parse_json['includes']['users'][i]['username']
+            
+                #print(parse_json['includes']['users'][i]['created_at'])
+                time = parse_json['includes']['users'][i]['created_at']
+                 
+                try:
+                    #print(parse_json['includes']['users'][i]['location'])
+                    loc = parse_json['includes']['users'][i]['location']
+                except KeyError:
+                    #print('No Location')
+                    loc = 'NULL'
+            
+                for j in range(len(parse_json['data'][i]['entities']['hashtags'])):
+                    #print(parse_json['data'][i]['entities']['hashtags'][j]['tag']) 
+                    hashtag = parse_json['data'][i]['entities']['hashtags'][j]['tag']
+                    #print(hashtag)
+                
+                    sql_player = '''
+                    DECLARE @created_twitter_id int
+                    EXEC dbo.TwitterTable ?,?,?,?,?,?,?, @Tweets = @created_twitter_id OUTPUT
+                    SELECT @created_twitter_id AS [TweetId]
+                    '''
+
+                    args = (user_id, tweet_id, tweet_text, handle, time, loc, hashtag)#hashtag
+                    cursor.execute (sql_player, args)
+                    cursor.commit()
+                    
+                print(i,'-------------')
+                
+            except IndexError:
+                print('Error Index')
+        except KeyError:
+            print('No Hashtags')
+            hashtag = 'NULL'
+            loc = 'NULL'
+            print(hashtag)
+            sql_player = '''
+            DECLARE @created_twitter_id int
+            EXEC dbo.TwitterTable ?,?,?,?,?,?,?, @Tweets = @created_twitter_id OUTPUT
+            SELECT @created_twitter_id AS [TweetId]
+            '''
+
+            args = (user_id, tweet_id ,tweet_text, handle, time, loc, hashtag)
+            cursor.execute (sql_player, args)
+            cursor.commit()
+            print(i,'-------------')
