@@ -1,0 +1,46 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+
+df = pd.read_csv("customers.csv") #Practice Data Set
+
+print(df.isnull().values.any()) #Check for any missing values in the dataframe
+
+x = df['Annual Income (k$)']
+y = df['Spending Score (1-100)']
+
+plt.scatter(x, y) #Visualize Data, 5 potential clusters
+
+#Put the variables we care about into one dataframe
+dfc = df[['Annual Income (k$)', 'Spending Score (1-100)']]
+
+distortions = []
+K = range(1,10)
+for i in K:
+    kmeans = KMeans(n_clusters=i)
+    kmeans.fit(dfc)
+    distortions.append(kmeans.inertia_)
+
+#Visualize proper amount of clusters
+plt.figure(figsize=(16,8))
+plt.plot(K, distortions, 'bx-')
+plt.xlabel('k')
+plt.ylabel('Distortion')
+plt.title('The Elbow Method showing the optimal k')
+plt.show()
+
+#5 clusters looks optimal
+
+kmeans = KMeans(n_clusters=5, random_state=0)
+kmeans.fit(dfp)
+predicted_cluster_indexes = kmeans.predict(dfp)
+
+plt.scatter(x, y, c=predicted_cluster_indexes, s=50, alpha=0.7, cmap='viridis')
+
+centers = kmeans.cluster_centers_
+plt.scatter(centers[:, 0], centers[:, 1], c='red', s=100)
+
+#Add cluster column to the origional data set
+df['Cluster'] = predicted_cluster_indexes
+print(df)
