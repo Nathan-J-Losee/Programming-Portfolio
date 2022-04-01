@@ -1,0 +1,203 @@
+DROP TABLE IF EXISTS HashTweetTable
+DROP TABLE IF EXISTS TweetTable
+DROP TABLE IF EXISTS HashtagTable
+DROP TABLE IF EXISTS LocationTable
+DROP TABLE IF EXISTS TestTable
+DROP TABLE IF EXISTS AuthorTable
+
+
+GO
+
+CREATE TABLE TestTable
+(
+	[Key] int IDENTITY(1, 1) PRIMARY KEY,
+	[User_Id] varchar(50) NOT NULL,
+	[Topic_Id] varchar(50) NOT NULL,
+	[Tweet_Id] varchar(50) NOT NULL,
+	[Tweet] varchar(255) NOT NULL,
+	[Handle] varchar(50) NOT NULL,
+	[Created_Date] date NOT NULL,
+	[Location] varchar(50) NOT NULL,
+	[HashTag] varchar(50)
+
+)
+
+CREATE TABLE AuthorTable
+(
+	[AuthorKey] int IDENTITY(1, 1) PRIMARY KEY,
+	[User_Id] varchar(50) NOT NULL,
+	[Handle] varchar(50) NOT NULL
+
+)
+
+CREATE TABLE LocationTable
+(
+	[LocationKey] int IDENTITY(1, 1) PRIMARY KEY,
+	[Location] varchar(50)
+
+)
+
+CREATE TABLE TweetTable
+(
+	[TweetKey] int IDENTITY(1, 1) PRIMARY KEY,
+	[Topic_Id] varchar(50) NOT NULL,
+	[Tweet_Id] varchar(50) NOT NULL,
+	[Tweet] varchar(255) NOT NULL,
+	[AuthorKey] int NOT NULL FOREIGN KEY REFERENCES AuthorTable([AuthorKey]),
+	[Created_Date] date NOT NULL,
+	[LocationKey] int NOT NULL FOREIGN KEY REFERENCES LocationTable([LocationKey])
+)
+
+
+CREATE TABLE HashtagTable
+(
+	[HashtagKey] int IDENTITY(1, 1) PRIMARY KEY,
+	[HashTag] varchar(50)
+
+)
+
+
+
+
+CREATE TABLE HashTweetTable
+(
+	[HashTweetKey] int IDENTITY(1, 1) PRIMARY KEY,
+	[TweetKey] int FOREIGN KEY REFERENCES TweetTable([TweetKey]),
+	[HashtagKey] int FOREIGN KEY REFERENCES HashtagTable([HashtagKey])
+
+)
+
+
+
+
+
+GO
+--CREATE OR ALTER PROCEDURE AuthorInsert
+
+--(
+    
+--    @UserId varchar(50),
+--	@Handle varchar(50),
+--	@AuthorId int OUTPUT
+--)
+
+--AS
+--BEGIN
+
+--	IF(SELECT COUNT(*) FROM AuthorTable WHERE [User_Id] = @UserId) = 0
+--    BEGIN
+--        INSERT AuthorTable ([User_Id], Handle) VALUES (@UserId, @Handle)
+--    END
+    
+--    SELECT @AuthorId = [User_Id] FROM AuthorTable WHERE [User_id] = @UserId
+    
+--END
+
+
+
+
+
+
+
+--------------------------------------------------------------------
+GO
+CREATE OR ALTER PROCEDURE TwitterTable
+
+(
+    
+    @UserId varchar(50),
+	@Topic_Id varchar(50),
+	@TweetId varchar(50),
+	@Tweet varchar(255),
+	@Handle varchar(50),
+	@Date date,
+	@Location varchar(50),
+	@Hashtag varchar(50),
+	@Tweets int OUTPUT
+)
+
+AS
+BEGIN
+	INSERT TestTable([User_Id], [Topic_Id],[Tweet_Id], [Tweet] ,[Handle],[Created_Date],[Location],[HashTag]) 
+	VALUES (@UserId, @Topic_Id, @TweetId, @Tweet, @Handle, @Date, @Location, @Hashtag)
+    
+END
+
+-------------------------------------------------------------------------------
+
+SELECT DISTINCT * FROM TestTable
+
+------------------------------------------------------------------------------------------------------------
+INSERT AuthorTable ([User_Id], Handle)
+SELECT DISTINCT
+	TT.[User_Id],
+	TT.Handle
+FROM 
+	TestTable AS TT
+	LEFT JOIN AuthorTable AS AUTH ON TT.[User_Id] = AUTH.[User_Id]
+
+WHERE
+	AUTH.[User_Id] IS NULL
+
+--DELETE AuthorTable
+
+
+SELECT * FROM AuthorTable
+
+---------------------------------------------------------------------------
+
+INSERT LocationTable([Location])
+SELECT DISTINCT
+	TT.[Location]
+
+FROM 
+	TestTable AS TT
+	LEFT JOIN LocationTable AS LOC ON TT.[Location] = LOC.[Location]
+
+WHERE
+	LOC.[Location] IS NULL
+
+SELECT * FROM LocationTable
+
+------------------------------------------------------------------------
+
+INSERT TweetTable(Topic_Id, Tweet_Id, Tweet, AuthorKey, Created_Date, LocationKey)
+SELECT DISTINCT
+	TT.Topic_Id, TT.Tweet_Id, TT.Tweet, AUTH.AuthorKey, TT.Created_Date, LOC.LocationKey
+FROM 
+	TestTable AS TT
+	LEFT JOIN TweetTable AS TWE ON TT.Tweet_Id = TWE.Tweet_Id
+	LEFT JOIN AuthorTable AS AUTH ON TT.User_Id = AUTH.User_Id
+	LEFT JOIN LocationTable AS LOC ON TT.Location = LOC.Location
+WHERE
+TWE.[Tweet_Id] IS NULL
+
+SELECT * FROM TweetTable
+-----------------------------------------------------------------------
+
+INSERT HashtagTable(HashTag)
+SELECT DISTINCT
+	TT.HashTag
+
+FROM 
+	TestTable AS TT
+	LEFT JOIN HashtagTable AS HT ON TT.HashTag = HT.HashTag
+
+WHERE
+	HT.HashTag IS NULL
+
+SELECT * FROM HashtagTable
+
+
+-----------------------------------------------------------------------------
+INSERT HashTweetTable(TweetKey, HashtagKey)
+SELECT DISTINCT
+	TWE.TweetKey, HT.HashtagKey
+FROM
+	TestTable AS TT
+	INNER JOIN AuthorTable AS AUTH ON TT.User_Id = Auth.User_Id
+	INNER JOIN TweetTable AS TWE ON TT.Tweet_Id = TWE.Tweet_Id
+	INNER JOIN HashtagTable AS HT ON TT.HashTag = HT.HashTag
+	INNER JOIN LocationTable AS LOC ON TT.[Location] = LOC.[Location]
+
+SELECT * FROM HashTweetTable
